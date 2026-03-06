@@ -14,6 +14,20 @@ import {
 // In-memory progress store (sufficient for single-server MVP)
 const progressStore = new Map<string, ScanProgress>();
 
+function log(runId: string, msg: string, extra?: Record<string, unknown>): void {
+  const ts = new Date().toISOString();
+  const extraStr = extra ? ' ' + JSON.stringify(extra) : '';
+  console.log(`[${ts}] [route/scan] [${runId}] ${msg}${extraStr}`);
+}
+
+function logError(runId: string, msg: string, err: unknown): void {
+  const ts = new Date().toISOString();
+  const message = err instanceof Error ? err.message : String(err);
+  const stack   = err instanceof Error ? err.stack   : undefined;
+  console.error(`[${ts}] [route/scan] [${runId}] ${msg}: ${message}`);
+  if (stack) console.error(stack);
+}
+
 export function scanRouter(runsBaseDir: string): IRouter {
   const router = Router();
 
@@ -48,6 +62,7 @@ export function scanRouter(runsBaseDir: string): IRouter {
 
     const runId = uuidv4();
     const startedAt = new Date().toISOString();
+    log(runId, 'Scan request received', { url: scanOptions.url, depth: scanOptions.depth, maxPages: scanOptions.maxPages });
 
     // Initialise progress
     progressStore.set(runId, {
@@ -66,6 +81,7 @@ export function scanRouter(runsBaseDir: string): IRouter {
 
     // Run scan in background (fire-and-forget)
     setImmediate(async () => {
+      log(runId, 'Background scan task starting…');
       try {
         progressStore.set(runId, {
           ...progressStore.get(runId)!,
@@ -97,7 +113,9 @@ export function scanRouter(runsBaseDir: string): IRouter {
           currentStep: 'Scan complete.',
           completedAt: new Date().toISOString(),
         });
+        log(runId, 'Scan completed successfully');
       } catch (err) {
+        logError(runId, 'Scan failed with unhandled error', err);
         const eg = progressStore.get(runId);
         progressStore.set(runId, {
           ...(eg ?? {

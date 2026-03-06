@@ -43,7 +43,20 @@ app.get('/api/health', (_req, res) => {
 
 app.listen(PORT, () => {
   console.log(`\n🚀 ESG Bias Scanner API running on http://localhost:${PORT}`);
-  console.log(`   Runs directory: ${RUNS_DIR}\n`);
+  console.log(`   Runs directory : ${RUNS_DIR}`);
+  console.log(`   Allowed origins: ${allowedOrigins.join(', ')}`);
+  console.log(`   Node version   : ${process.version}`);
+  console.log(`   Environment    : ${process.env.NODE_ENV ?? 'development'}\n`);
+});
+
+// Surface unhandled promise rejections so Railway logs capture them
+process.on('unhandledRejection', (reason) => {
+  console.error('[unhandledRejection]', reason);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('[uncaughtException]', err.message);
+  console.error(err.stack);
 });
 
 export default app;

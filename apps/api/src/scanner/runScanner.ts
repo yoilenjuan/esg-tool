@@ -129,6 +129,21 @@ function buildConfig(
   };
 }
 
+// ─── Structured logger ───────────────────────────────────────────────────────
+function log(runId: string, phase: string, message: string, extra?: Record<string, unknown>): void {
+  const ts = new Date().toISOString();
+  const extraStr = extra ? ' ' + JSON.stringify(extra) : '';
+  console.log(`[${ts}] [${runId}] [${phase}] ${message}${extraStr}`);
+}
+
+function logError(runId: string, phase: string, err: unknown): void {
+  const ts = new Date().toISOString();
+  const msg = err instanceof Error ? err.message : String(err);
+  const stack = err instanceof Error ? err.stack : undefined;
+  console.error(`[${ts}] [${runId}] [${phase}] ERROR: ${msg}`);
+  if (stack) console.error(stack);
+}
+
 // ─── Partial result saver (on error) ─────────────────────────────────────────
 function savePartial(runDir: string, data: Partial<ScanRunResult>): void {
   try {
@@ -165,7 +180,10 @@ export async function runApiScan(
   };
 
   progress('Launching browser', 2);
+  log(runId, 'init', 'Scan started', { url: options.url, depth: options.depth, maxPages: config.maxPages, recordVideo });
 
+  const t0 = Date.now();
+  log(runId, 'browser', 'Launching Chromium…');
   const browser = await chromium.launch({
     headless: true,
     args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
@@ -204,36 +222,57 @@ export async function runApiScan(
     progress('Discovering pages', 5);
 
     // ── Phase 1: Discovery ────────────────────────────────────────────────────
-    let discoveredCount = 0;    console.log(`[scanner] Starting crawl: ${options.url} (maxPages=${config.maxPages})`);    const crawledPages = await discoverPages(ctx, config, (count) => {
+    log(runId, 'browser', 'Browser + context ready', { elapsed: `${Date.now() - t0}ms` });
+    const t1 = Date.now();
+    log(runId, 'discovery', 'Starting page crawl', { url: options.url, maxPages: config.maxPages });
+    let discoveredCount = 0;
+    const crawledPages = await discoverPages(ctx, config, (count) => {
       discoveredCount = count;
+      log(runId, 'discovery', `Pages discovered so far: ${count}`);
       progress('Discovering pages', 5 + Math.min(count, config.maxPages) / config.maxPages * 20, discoveredCount, 0);
     });
 
-    console.log(`[scanner] Crawled ${crawledPages.length} page(s): ${crawledPages.map((p) => `${p.url} [${p.httpStatus}]`).join(', ')}`);
+    log(runId, 'discovery', `Crawl complete`, {
+      elapsed: `${Date.now() - t1}ms`,
+      pages: crawledPages.length,
+      urls: crawledPages.map((p) => `${p.url} [${p.httpStatus ?? 'n/a'}]`),
+    });
     progress('Analysing forms', 30, crawledPages.length, crawledPages.length);
 
     // ── Phase 2: Form analysis ────────────────────────────────────────────────
+    const t2 = Date.now();
+    log(runId, 'forms', 'Starting form analysis…');
     const formAnalysis = await analyseForms(ctx, crawledPages);
+    log(runId, 'forms', 'Form analysis complete', { elapsed: `${Date.now() - t2}ms` });
 
     progress('Probing EAI email', 45, crawledPages.length, crawledPages.length);
 
     // ── Phase 3: EAI probe ────────────────────────────────────────────────────
+    const t3 = Date.now();
+    log(runId, 'eai', 'Starting EAI email probe…');
     const { analysis: eaiAnalysis, evidences: eaiEvidences } = await probeEmailEAI(
       ctx,
       crawledPages,
       config,
     );
     allEvidences.push(...eaiEvidences);
+    log(runId, 'eai', 'EAI probe complete', { elapsed: `${Date.now() - t3}ms`, evidences: eaiEvidences.length });
 
     progress('Analysing language bias', 60, crawledPages.length, crawledPages.length);
 
     // ── Phase 4: Language bias ────────────────────────────────────────────────
+    const t4 = Date.now();
+    log(runId, 'language', 'Starting language bias analysis…');
     const languageBias = await analyseLanguageBias(crawledPages, options.languageToolUrl);
+    log(runId, 'language', 'Language bias analysis complete', { elapsed: `${Date.now() - t4}ms` });
 
     progress('Analysing visual diversity', 72, crawledPages.length, crawledPages.length);
 
     // ── Phase 5: Visual diversity ─────────────────────────────────────────────
+    const t5 = Date.now();
+    log(runId, 'visual', 'Starting visual diversity analysis…');
     const visualDiversity = await analyseVisualDiversity(ctx, crawledPages);
+    log(runId, 'visual', 'Visual diversity analysis complete', { elapsed: `${Date.now() - t5}ms` });
 
     // ── Close context to flush video ──────────────────────────────────────────
     if (recordVideo) {
@@ -254,11 +293,14 @@ export async function runApiScan(
     progress('Summarising findings', 82, crawledPages.length, crawledPages.length);
 
     // ── Phase 6: Summarise ────────────────────────────────────────────────────
+    const t6 = Date.now();
+    log(runId, 'summarize', 'Summarising dimensions…');
     const dimensions = summariseDimensions(
       { formAnalysis, eaiAnalysis, languageBias, visualDiversity },
       allEvidences,
     );
     const salesImpactSummary = buildSalesImpactSummary(dimensions);
+    log(runId, 'summarize', 'Dimensions summarised', { elapsed: `${Date.now() - t6}ms`, dimensionCount: Object.keys(dimensions).length });
 
     // ── Phase 6b: Retail EU Risk Score ────────────────────────────────────────
     progress('Running Retail EU risk engine…', 86, crawledPages.length, crawledPages.length);
@@ -267,6 +309,8 @@ export async function runApiScan(
     let conversionExposureScore: number | undefined;
     let conversionExposureLevel: RetailRiskLevel | undefined;
 
+    const t6b = Date.now();
+    log(runId, 'retail', 'Running Retail EU risk engine…');
     try {
       const retailSnapshot = buildRetailSnapshot(options.url, toPageResults(crawledPages));
       const retailEngine   = new RetailRuleEngine();
@@ -274,13 +318,22 @@ export async function runApiScan(
       const conversionData = deriveConversionExposure(primaryScore.breakdown);
       conversionExposureScore = conversionData.conversionExposureScore;
       conversionExposureLevel = conversionData.conversionExposureLevel;
+      log(runId, 'retail', 'Retail engine complete', {
+        elapsed: `${Date.now() - t6b}ms`,
+        overallScore: primaryScore.overallScore,
+        riskLevel: primaryScore.riskLevel,
+        conversionExposureScore,
+      });
     } catch (retailErr) {
-      console.warn('[runScanner] Retail engine failed (non-fatal):', retailErr);
+      logError(runId, 'retail', retailErr);
+      console.warn('[runScanner] Retail engine failed (non-fatal) — continuing without retail score.');
     }
 
     progress('Generating PDF report', 90, crawledPages.length, crawledPages.length);
 
     // ── Phase 7: PDF ──────────────────────────────────────────────────────────
+    const t7 = Date.now();
+    log(runId, 'pdf', 'Generating PDF report…');
     let pdfPath: string | null = null;
     try {
       pdfPath = await generatePdfReport(
@@ -303,8 +356,10 @@ export async function runApiScan(
         runDir,
         browser,
       );
+      log(runId, 'pdf', 'PDF report generated', { elapsed: `${Date.now() - t7}ms`, pdfPath });
     } catch (pdfErr) {
-      console.error('[runScanner] PDF generation failed:', pdfErr);
+      logError(runId, 'pdf', pdfErr);
+      console.warn('[runScanner] PDF generation failed (non-fatal) — report.json will still be saved.');
     }
 
     const completedAt = new Date().toISOString();
@@ -329,6 +384,12 @@ export async function runApiScan(
     // Save report.json
     const reportPath = path.join(runDir, 'report.json');
     fs.writeFileSync(reportPath, JSON.stringify(result, null, 2));
+    log(runId, 'done', 'Scan complete', {
+      totalElapsed: `${Date.now() - t0}ms`,
+      pagesScanned: crawledPages.length,
+      overallScore: primaryScore?.overallScore ?? null,
+      reportPath,
+    });
 
     onProgress({
       runId,
@@ -343,7 +404,9 @@ export async function runApiScan(
 
     return result;
   } catch (err: unknown) {
+    logError(runId, 'fatal', err);
     const msg = err instanceof Error ? err.message : String(err);
+    log(runId, 'fatal', 'Scan failed — saving partial result', { totalElapsed: `${Date.now() - t0}ms` });
     savePartial(runDir, {
       runId,
       companyUrl: options.url,
