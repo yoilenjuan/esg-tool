@@ -34,41 +34,22 @@ RUN pnpm --filter api deploy --prod /app/standalone
 # ── Stage 2: runtime ─────────────────────────────────────────────────────────
 FROM node:20-slim AS runner
 
-# Install Playwright system dependencies + Chromium
+# Install system dependencies required by Playwright's Chromium
 RUN apt-get update && apt-get install -y \
-  chromium \
-  fonts-liberation \
-  libasound2 \
-  libatk-bridge2.0-0 \
-  libatk1.0-0 \
-  libcups2 \
-  libdbus-1-3 \
-  libgdk-pixbuf2.0-0 \
-  libglib2.0-0 \
-  libgtk-3-0 \
-  libnspr4 \
-  libnss3 \
-  libx11-xcb1 \
-  libxcomposite1 \
-  libxdamage1 \
-  libxfixes3 \
-  libxrandr2 \
-  libxss1 \
-  libxtst6 \
-  wget \
-  xdg-utils \
+  ca-certificates \
   --no-install-recommends && rm -rf /var/lib/apt/lists/*
 
-ENV PLAYWRIGHT_BROWSERS_PATH=/usr/bin
-ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
-ENV CHROMIUM_PATH=/usr/bin/chromium
 ENV NODE_ENV=production
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 
 WORKDIR /app
 
 # Copy the self-contained bundle produced by pnpm deploy
 # All deps are real files (no symlinks), workspace:* packages resolved into node_modules
 COPY --from=builder /app/standalone ./
+
+# Install Playwright's Chromium + all its OS dependencies in one step
+RUN npx playwright install --with-deps chromium
 
 RUN mkdir -p /app/runs
 
