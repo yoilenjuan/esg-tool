@@ -1,7 +1,6 @@
 # ── Stage 1: build ──────────────────────────────────────────────────────────
 FROM node:20-slim AS builder
 
-# Install pnpm
 RUN npm install -g pnpm@9
 
 WORKDIR /app
@@ -25,6 +24,12 @@ RUN pnpm --filter shared build
 RUN pnpm --filter scanner build
 RUN pnpm --filter report build
 RUN pnpm --filter api build
+
+# pnpm deploy creates a fully self-contained folder:
+# - copies dist + package.json
+# - resolves ALL workspace:* deps and copies their built dist into node_modules
+# - no symlinks, all real files — fixes MODULE_NOT_FOUND at runtime
+RUN pnpm --filter api deploy --prod /app/standalone
 
 # ── Stage 2: runtime ─────────────────────────────────────────────────────────
 FROM node:20-slim AS runner
@@ -57,26 +62,15 @@ RUN apt-get update && apt-get install -y \
 ENV PLAYWRIGHT_BROWSERS_PATH=/usr/bin
 ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 ENV CHROMIUM_PATH=/usr/bin/chromium
-
-RUN npm install -g pnpm@9
+ENV NODE_ENV=production
 
 WORKDIR /app
 
-# Copy built artifacts from builder
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
-COPY --from=builder /app/packages/shared/package.json ./packages/shared/
-COPY --from=builder /app/packages/scanner/dist ./packages/scanner/dist
-COPY --from=builder /app/packages/scanner/package.json ./packages/scanner/
-COPY --from=builder /app/packages/report/dist ./packages/report/dist
-COPY --from=builder /app/packages/report/package.json ./packages/report/
-COPY --from=builder /app/apps/api/dist ./apps/api/dist
-COPY --from=builder /app/apps/api/node_modules ./apps/api/node_modules
-COPY --from=builder /app/apps/api/package.json ./apps/api/
+# Copy the self-contained bundle produced by pnpm deploy
+# All deps are real files (no symlinks), workspace:* packages resolved into node_modules
+COPY --from=builder /app/standalone ./
 
 RUN mkdir -p /app/runs
-
-WORKDIR /app/apps/api
 
 EXPOSE 3001
 
