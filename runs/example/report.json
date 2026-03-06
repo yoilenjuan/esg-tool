@@ -1,0 +1,258 @@
+{
+  "runId": "example-run-00000000-0000-0000-0000-000000000000",
+  "options": {
+    "url": "https://www.example-retailer.com",
+    "depth": "standard",
+    "recordVideo": false,
+    "maxPages": 15
+  },
+  "status": "completed",
+  "startedAt": "2026-02-25T10:00:00.000Z",
+  "completedAt": "2026-02-25T10:03:42.000Z",
+  "pagesScanned": [
+    "https://www.example-retailer.com/",
+    "https://www.example-retailer.com/registro",
+    "https://www.example-retailer.com/login",
+    "https://www.example-retailer.com/checkout",
+    "https://www.example-retailer.com/contacto"
+  ],
+  "executiveSummary": "Scan of https://www.example-retailer.com analysed 5 page(s) across 8 inclusivity dimensions. Overall inclusivity score: 47/100. 2 dimension(s) comply; 6 require attention. Key concerns: Gender, Email Internationalization (EAI), Civil / Marital Status, Age, Race & Ethnicity, Legal Document.",
+  "overallScore": 47,
+  "findings": [
+    {
+      "dimensionId": "gender",
+      "dimensionLabel": "Gender",
+      "status": "Does Not Comply",
+      "issueSummary": "Binary-only gender selector detected (Male/Female only).",
+      "issues": [
+        "Binary-only gender selector detected (Male/Female only).",
+        "No inclusive/neutral gender option (\"Non-binary\", \"Other\", \"Prefer not to say\") found.",
+        "Gendered titles found: Sr. (https://www.example-retailer.com/registro), Sra. (https://www.example-retailer.com/registro)."
+      ],
+      "evidenceIds": ["ev-001", "ev-002"],
+      "recommendations": [
+        "Add a \"Prefer not to say\" and/or \"Non-binary / Other\" option to all gender selects.",
+        "Replace Mr./Mrs./Ms. with an optional Mx. honorific.",
+        "Use gender-neutral copy (\"your order\", \"the account holder\") throughout.",
+        "Allow users to skip gender fields entirely if not business-critical."
+      ],
+      "goodPracticeExamples": [
+        "Sephora (gender-neutral forms)",
+        "ASOS (inclusive sizing + gender options)",
+        "Patagonia (non-binary honorifics)"
+      ],
+      "salesImpact": {
+        "currentImpact": "Binary gender fields alienate non-binary and transgender customers, causing form abandonment at registration/checkout. Studies show 1–4% of population identifies outside binary gender.",
+        "futureImpact": "Gen Z (>25% of purchasing power by 2030) expects inclusive UX as baseline. Brands perceived as exclusionary lose share to competitors.",
+        "benefitIfResolved": "Inclusive gender fields increase registration completion rates by ~3–7%, reduce support contacts, and boost NPS among LGBTQ+ segments."
+      }
+    },
+    {
+      "dimensionId": "email_internationalization",
+      "dimensionLabel": "Email Internationalization (EAI)",
+      "status": "Does Not Comply",
+      "issueSummary": "Unicode email (e.g., josé@correo.es) was rejected by the form validator.",
+      "issues": [
+        "Unicode email (e.g., josé@correo.es) was rejected by the form validator.",
+        "Rejection message observed: \"Por favor, introduce una dirección de correo válida.\""
+      ],
+      "evidenceIds": ["ev-002"],
+      "recommendations": [
+        "Validate email addresses against RFC 5322 extended with RFC 6532 (Unicode local-part support).",
+        "Remove browser-based type=\"email\" HTML5 validation in favour of server-side EAI-aware validation.",
+        "Test with: josé@correo.es, 用户@例子.广告, Ñoño@empresa.com.mx."
+      ],
+      "goodPracticeExamples": [
+        "Stripe (EAI-compliant email validation)",
+        "Shopify (Unicode email support)"
+      ],
+      "salesImpact": {
+        "currentImpact": "Rejecting Unicode emails (RFC 6532) blocks customers with non-ASCII names — a large segment in LATAM, Asia and among diaspora communities. Direct revenue loss per rejected registration.",
+        "futureImpact": "As global ecommerce grows, EAI adoption will become a compliance expectation. Delayed migration increases technical debt.",
+        "benefitIfResolved": "Accepting EAI emails removes a silent conversion blocker, estimates suggest 0.5–2% registration uplift in international markets."
+      }
+    },
+    {
+      "dimensionId": "nationality",
+      "dimensionLabel": "Nationality",
+      "status": "Not Requested",
+      "issueSummary": "Nationality field not requested in scanned flows.",
+      "issues": ["No nationality field detected."],
+      "evidenceIds": [],
+      "recommendations": [
+        "Replace closed nationality selects with a searchable free-text field with auto-complete.",
+        "If a closed list is required, add \"Other / Prefer to self-describe\" with a text input.",
+        "Evaluate whether nationality data is legally required; if not, remove the field."
+      ],
+      "goodPracticeExamples": [
+        "Airbnb (free-text nationality with autocomplete)",
+        "Booking.com (optional nationality field)"
+      ],
+      "salesImpact": {
+        "currentImpact": "Closed nationality lists with no self-description option exclude customers who do not identify with listed nationalities, increasing dropout and complaints.",
+        "futureImpact": "Cross-border commerce regulation (e.g., EU Digital Markets Act) may require inclusive identity fields.",
+        "benefitIfResolved": "Open or self-description nationality fields reduce friction for international customers and improve data quality."
+      }
+    },
+    {
+      "dimensionId": "country",
+      "dimensionLabel": "Country",
+      "status": "Partially Complies",
+      "issueSummary": "Country selector has limited coverage (28 options). Many countries likely missing.",
+      "issues": [
+        "Country selector has limited coverage (28 options). Many countries likely missing."
+      ],
+      "evidenceIds": ["ev-003"],
+      "recommendations": [
+        "Use a comprehensive ISO 3166-1 alpha-2 country list (195+ countries).",
+        "Implement a searchable/auto-complete country selector.",
+        "Do not pre-select or hard-code a single country.",
+        "Provide localised country names where possible."
+      ],
+      "goodPracticeExamples": [
+        "Amazon (195+ country selector with search)",
+        "Shopify (ISO 3166-1 complete list)"
+      ],
+      "salesImpact": {
+        "currentImpact": "Country selectors missing key emerging markets exclude potential customers before the purchase is even attempted.",
+        "futureImpact": "APAC and Africa represent the fastest-growing ecommerce markets. Limited country coverage directly caps addressable market.",
+        "benefitIfResolved": "Comprehensive country coverage enables cross-border sales, reduces customer support overhead, and signals global ambition."
+      }
+    },
+    {
+      "dimensionId": "civil_status",
+      "dimensionLabel": "Civil / Marital Status",
+      "status": "Does Not Comply",
+      "issueSummary": "Civil status options do not include non-heteronormative choices (domestic partnership, civil union).",
+      "issues": [
+        "Civil status options do not include non-heteronormative choices (domestic partnership, civil union).",
+        "Only heteronormative marital statuses offered (single/married/divorced)."
+      ],
+      "evidenceIds": ["ev-002"],
+      "recommendations": [
+        "Add: \"Civil union / domestic partnership\", \"Cohabiting\", \"Prefer not to say\" options.",
+        "Evaluate whether civil status is legally required; if not, remove the field.",
+        "Use gender-neutral labels: \"Partner\" instead of \"Husband/Wife\"."
+      ],
+      "goodPracticeExamples": [
+        "Progressive Insurance (inclusive civil status options)",
+        "Nationwide (domestic partner inclusion)"
+      ],
+      "salesImpact": {
+        "currentImpact": "Requiring civil status without inclusive options excludes same-sex couples and non-traditional family structures.",
+        "futureImpact": "Legal frameworks in numerous markets now recognise diverse family structures; non-compliance creates regulatory exposure.",
+        "benefitIfResolved": "Inclusive civil status options improve completeness of customer data and signal brand inclusivity."
+      }
+    },
+    {
+      "dimensionId": "age",
+      "dimensionLabel": "Age",
+      "status": "Partially Complies",
+      "issueSummary": "Date of birth is marked as required in one or more forms.",
+      "issues": [
+        "Date of birth is marked as required in one or more forms.",
+        "Age-stereotyped language found: \"para jóvenes\" on https://www.example-retailer.com/"
+      ],
+      "evidenceIds": ["ev-001", "ev-002"],
+      "recommendations": [
+        "Only collect date of birth where legally required (e.g., age-restricted products).",
+        "Replace DOB input with a simple age-confirmation checkbox for age-gating.",
+        "Audit UX copy for age-segmented language; replace with inclusive alternatives.",
+        "Apply data minimisation principle per GDPR Art. 5(1)(c)."
+      ],
+      "goodPracticeExamples": [
+        "Netflix (DOB only for age-restricted content)",
+        "Spotify (minimal DOB usage, age-gate alternative)"
+      ],
+      "salesImpact": {
+        "currentImpact": "Mandatory date-of-birth fields deter privacy-conscious customers. Age-stereotyped copy alienates both younger and older segments.",
+        "futureImpact": "GDPR and CCPA impose data minimisation; collecting unnecessary DOB data increases compliance risk.",
+        "benefitIfResolved": "Removing unnecessary DOB requirements reduces registration friction. Age-neutral UX copy broadens appeal across all demographics."
+      }
+    },
+    {
+      "dimensionId": "race_ethnicity",
+      "dimensionLabel": "Race & Ethnicity",
+      "status": "Partially Complies",
+      "issueSummary": "Visual diversity appears moderate; room for improvement on hero/landing pages (approximate heuristic). Approximate heuristic based on image count and alt-text variety. Does NOT identify individuals.",
+      "issues": [
+        "Visual diversity appears moderate; room for improvement on hero/landing pages (approximate heuristic)."
+      ],
+      "evidenceIds": ["ev-004"],
+      "recommendations": [
+        "Audit hero and landing page imagery; ensure representation across diverse contexts and skin tones.",
+        "Include imagery from varied cultural contexts, not just symbolic/tokenistic representation.",
+        "Consult with diverse focus groups when selecting campaign imagery."
+      ],
+      "goodPracticeExamples": [
+        "Nike (diverse visual representation)",
+        "Fenty Beauty (inclusive imagery across all pages)"
+      ],
+      "salesImpact": {
+        "currentImpact": "Limited visual representation on hero pages signals exclusion to minority ethnic customers, correlating with lower engagement.",
+        "futureImpact": "Diverse representation in brand imagery is increasingly a purchasing criterion, especially for Gen Z and millennial consumers.",
+        "benefitIfResolved": "Diverse imagery improves brand perception, reduces bounce rates, and expands emotional resonance across customer segments."
+      }
+    },
+    {
+      "dimensionId": "legal_document",
+      "dimensionLabel": "Legal Document",
+      "status": "Does Not Comply",
+      "issueSummary": "Only national ID (DNI) accepted — foreign residents and international customers excluded.",
+      "issues": [
+        "Only national ID (DNI) accepted — foreign residents and international customers excluded.",
+        "Passport not listed as an accepted document type.",
+        "No foreign resident document (NIE or equivalent) accepted."
+      ],
+      "evidenceIds": ["ev-003"],
+      "recommendations": [
+        "Accept at minimum: national ID (DNI), foreign resident ID (NIE), Passport, and EU Driving Licence.",
+        "For international flows, accept: Passport, national ID from any country, residence permit.",
+        "Validate document numbers without country-specific hard-coding."
+      ],
+      "goodPracticeExamples": [
+        "Revolut (multi-document onboarding)",
+        "N26 (passport + national ID + foreign resident ID)"
+      ],
+      "salesImpact": {
+        "currentImpact": "Accepting only national ID (DNI) excludes foreign residents, tourists, and recent immigrants — real purchasing power often in premium segments.",
+        "futureImpact": "Regulatory pressure to accept multiple ID types (e.g., EU eIDAS 2.0) is increasing. Early compliance reduces future migration cost.",
+        "benefitIfResolved": "Multi-document acceptance removes a hard blocker for foreign residents and cross-border customers, directly unlocking revenue."
+      }
+    }
+  ],
+  "evidence": [
+    {
+      "id": "ev-001",
+      "type": "screenshot",
+      "filePath": "screenshots/screenshot_ev-001.png",
+      "pageUrl": "https://www.example-retailer.com/",
+      "description": "Landing page overview",
+      "capturedAt": "2026-02-25T10:00:15.000Z"
+    },
+    {
+      "id": "ev-002",
+      "type": "screenshot",
+      "filePath": "screenshots/screenshot_ev-002.png",
+      "pageUrl": "https://www.example-retailer.com/registro",
+      "description": "Form page: Registration – gender + civil status fields",
+      "capturedAt": "2026-02-25T10:01:03.000Z"
+    },
+    {
+      "id": "ev-003",
+      "type": "screenshot",
+      "filePath": "screenshots/screenshot_ev-003.png",
+      "pageUrl": "https://www.example-retailer.com/checkout",
+      "description": "Form page: Checkout – country + document type fields",
+      "capturedAt": "2026-02-25T10:02:11.000Z"
+    },
+    {
+      "id": "ev-004",
+      "type": "screenshot",
+      "filePath": "screenshots/screenshot_ev-004.png",
+      "pageUrl": "https://www.example-retailer.com/",
+      "description": "Landing page hero imagery (visual diversity assessment)",
+      "capturedAt": "2026-02-25T10:00:18.000Z"
+    }
+  ]
+}

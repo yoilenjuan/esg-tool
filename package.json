@@ -1,0 +1,23 @@
+{
+  "name": "esg-retail-bias-scanner",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ESG Retail Bias Scanner – detects inclusivity/bias issues across retail digital touchpoints",
+  "scripts": {
+    "dev": "concurrently \"pnpm --filter web dev\" \"pnpm --filter api dev\"",
+    "build": "pnpm --filter shared build && pnpm --filter scanner build && pnpm --filter report build && pnpm --filter api build && pnpm --filter web build",
+    "scan": "pnpm --filter scanner cli",
+    "test": "pnpm -r test",
+    "lint": "pnpm -r lint",
+    "clean": "pnpm -r clean && rimraf node_modules"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "rimraf": "^5.0.5",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  }
+}

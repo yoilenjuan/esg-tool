@@ -1,0 +1,44 @@
+{
+  "name": "web",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3000",
+    "build": "next build",
+    "start": "next start",
+    "clean": "rimraf .next out",
+    "test": "jest --passWithNoTests",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@esg/shared": "workspace:*",
+    "clsx": "^2.1.0",
+    "next": "^14.1.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.11",
+    "@types/node": "^20.11.5",
+    "@types/react": "^18.2.48",
+    "@types/react-dom": "^18.2.18",
+    "autoprefixer": "^10.4.17",
+    "eslint": "^8.57.1",
+    "eslint-config-next": "16.1.6",
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0",
+    "postcss": "^8.4.33",
+    "rimraf": "^5.0.5",
+    "tailwindcss": "^3.4.1",
+    "ts-jest": "^29.1.2",
+    "typescript": "^5.3.3"
+  },
+  "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "jsdom",
+    "testMatch": [
+      "**/__tests__/**/*.test.tsx",
+      "**/__tests__/**/*.test.ts"
+    ]
+  }
+}
