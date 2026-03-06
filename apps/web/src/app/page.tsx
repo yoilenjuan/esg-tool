@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { ScanForm } from '@/components/ScanForm';
 import { ScanProgressPanel } from '@/components/ScanProgress';
 import { ResultsView } from '@/components/ResultsView';
-import { startScan } from '@/lib/api';
+import { startScan, API_BASE } from '@/lib/api';
 import type { ScanOptions, ScanRunResult } from '@/lib/types';
 
 type AppState = 'idle' | 'starting' | 'scanning' | 'done' | 'error';
@@ -16,26 +16,32 @@ export default function HomePage() {
   const [errorMsg, setErrorMsg] = useState('');
 
   async function handleScanStart(options: ScanOptions) {
+    console.info('[ESG App] Starting scan', options);
     setAppState('starting');
     setErrorMsg('');
     setResult(null);
     setRunId(null);
     try {
       const newRunId = await startScan(options);
+      console.info('[ESG App] Scan started → runId', newRunId);
       setRunId(newRunId);
       setAppState('scanning');
     } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : String(err));
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error('[ESG App] Scan start failed:', msg);
+      setErrorMsg(msg);
       setAppState('error');
     }
   }
 
   function handleScanComplete(scanResult: ScanRunResult) {
+    console.info('[ESG App] Scan complete, dimensions:', Object.keys(scanResult));
     setResult(scanResult);
     setAppState('done');
   }
 
   function handleScanError(msg: string) {
+    console.error('[ESG App] Scan error:', msg);
     setErrorMsg(msg);
     setAppState('error');
   }
@@ -108,6 +114,7 @@ export default function HomePage() {
                 <div>
                   <div className="text-sm font-bold text-red-700">Scan failed</div>
                   <div className="text-sm text-red-600 mt-0.5">{errorMsg}</div>
+                  <div className="text-xs text-red-400 mt-1 font-mono">API: {API_BASE}</div>
                 </div>
               </div>
             )}

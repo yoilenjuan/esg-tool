@@ -61,19 +61,24 @@ export function ScanProgressPanel({ runId, onComplete, onError }: ScanProgressPa
         if (p.status === 'completed' && !doneRef.current) {
           doneRef.current = true;
           clearInterval(pollTimer);
+          console.info('[ScanProgress] Status = completed, fetching report for', runId);
           try {
             const result = await getReport(runId);
             if (!cancelled) onComplete(result);
           } catch (e) {
-            if (!cancelled) onError(e instanceof Error ? e.message : 'Failed to load report');
+            const msg = e instanceof Error ? e.message : 'Failed to load report';
+            console.error('[ScanProgress] Failed to load report:', msg);
+            if (!cancelled) onError(msg);
           }
         } else if (p.status === 'failed' && !doneRef.current) {
           doneRef.current = true;
           clearInterval(pollTimer);
-          if (!cancelled) onError(p.errorMessage ?? 'Scan failed');
+          const errMsg = p.errorMessage ?? 'Scan failed';
+          console.error('[ScanProgress] Scan failed on server:', errMsg);
+          if (!cancelled) onError(errMsg);
         }
-      } catch {
-        // transient error — keep polling
+      } catch (pollErr) {
+        console.warn('[ScanProgress] Transient poll error (will retry):', pollErr);
       }
     }
 
