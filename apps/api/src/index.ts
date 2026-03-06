@@ -6,9 +6,26 @@ import { reportRouter } from './routes/report';
 
 const app: Express = express();
 const PORT = process.env.PORT || 3001;
-const RUNS_DIR = path.resolve(__dirname, '..', '..', '..', 'runs');
+const RUNS_DIR = process.env.RUNS_DIR || path.resolve(__dirname, '..', '..', '..', 'runs');
 
-app.use(cors({ origin: process.env.WEB_ORIGIN || 'http://localhost:3000' }));
+// Support comma-separated list of allowed origins, e.g.
+// WEB_ORIGIN=https://esg-tool.vercel.app,http://localhost:3000
+const allowedOrigins = (process.env.WEB_ORIGIN || 'http://localhost:3000')
+  .split(',')
+  .map((o) => o.trim());
+
+app.use(
+  cors({
+    origin: (origin, cb) => {
+      // allow requests with no origin (curl, server-to-server)
+      if (!origin) return cb(null, true);
+      if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
+        return cb(null, true);
+      }
+      cb(new Error(`CORS: origin ${origin} not allowed`));
+    },
+  }),
+);
 app.use(express.json());
 
 // Static files for evidence (screenshots / videos)
