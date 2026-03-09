@@ -6,6 +6,9 @@ import type { BrowserContext } from 'playwright';
 import type { CrawledPage, FormAnalysis, DetectedField, FormFieldCategory, FieldOption } from '../types/run';
 
 // ─── Classification patterns ──────────────────────────────────────────────────
+// NOTE — categories are checked in order; the FIRST match wins.
+// Keep more specific patterns (legal_document, nationality) BEFORE broader
+// ones (country) so that e.g. "country_of_birth" is not taken by 'country'.
 const CATEGORY_PATTERNS: Array<{ category: FormFieldCategory; patterns: RegExp[] }> = [
   {
     category: 'email',
@@ -15,57 +18,7 @@ const CATEGORY_PATTERNS: Array<{ category: FormFieldCategory; patterns: RegExp[]
       /\be.?mail\b/i,
     ],
   },
-  {
-    category: 'gender',
-    patterns: [
-      /\bgender\b/i,
-      /\bsex\b/i,
-      /\bg[eé]nero\b/i,
-      /\bsexo\b/i,
-      /\bpronoun\b/i,
-    ],
-  },
-  {
-    category: 'nationality',
-    patterns: [
-      /\bnational\b/i,
-      /\bnacionalidad\b/i,
-      /\bnacionality\b/i,
-      /\bcountry.?of.?birth\b/i,
-      /\bpa[ií]s.?de.?nacimiento\b/i,
-      /\bbirthplace\b/i,
-    ],
-  },
-  {
-    category: 'country',
-    patterns: [
-      /\bcountry\b/i,
-      /\bpa[ií]s\b/i,
-      /\bcountry.?of.?residence\b/i,
-      /\bregion\b/i,
-    ],
-  },
-  {
-    category: 'civil_status',
-    patterns: [
-      /\bmarital\b/i,
-      /\bcivil\b/i,
-      /\bstate.?civil\b/i,
-      /\bestado.?civil\b/i,
-      /\brelationship.?status\b/i,
-    ],
-  },
-  {
-    category: 'age_dob',
-    patterns: [
-      /\bage\b/i,
-      /\bdob\b/i,
-      /\bdate.?of.?birth\b/i,
-      /\bbirth.?date\b/i,
-      /\bfecha.?nac\b/i,
-      /\bnacimiento\b/i,
-    ],
-  },
+  // ── legal_document before nationality/country so DNI/NIE/passport win ─────
   {
     category: 'legal_document',
     patterns: [
@@ -74,11 +27,76 @@ const CATEGORY_PATTERNS: Array<{ category: FormFieldCategory; patterns: RegExp[]
       /\bnie\b/i,
       /\bpassport\b/i,
       /\bpasaporte\b/i,
-      /\bidentification\b/i,
-      /\bid.?card\b/i,
-      /\bdocumento\b/i,
-      /\bsocial.?security\b/i,
+      /\bidentification[\s_]?(number|type|card)?\b/i,
+      /\bid[\s_]?card\b/i,
+      /\bdocumento[\s_]?(nacional|identidad|type)?\b/i,
+      /\bsocial[\s_]?security\b/i,
       /\bssn\b/i,
+      /\bdocument[\s_]?type\b/i,
+    ],
+  },
+  // ── nationality before country so "country_of_birth" is caught here ────────
+  {
+    category: 'nationality',
+    patterns: [
+      /\bnationality\b/i,               // exact word — avoids "national savings" etc.
+      /\bnacionalidad\b/i,
+      /\bcountry[\s_.]?of[\s_.]?birth\b/i,
+      /\bpa[ií]s[\s_.]?de[\s_.]?nacimiento\b/i,
+      /\bbirthplace\b/i,
+      /\bpa[ií]s[\s_.]?nacimiento\b/i,
+    ],
+  },
+  // ── gender — includes title/salutation fields ──────────────────────────────
+  {
+    category: 'gender',
+    patterns: [
+      /\bgender\b/i,
+      /\bsex\b(?!ual)/i,                // "sex" but not "sexual"
+      /\bg[eé]nero\b/i,
+      /\bsexo\b/i,
+      /\bpronoun\b/i,
+      /\b(title|salutation|honorific|tratamiento|t[ií]tulo)\b/i,
+    ],
+  },
+  // ── country: billing/shipping/residence — NOT region (= state/province) ───
+  {
+    category: 'country',
+    patterns: [
+      /\bcountry\b/i,                   // "country", "country_code", "shippingCountry"
+      /\bpa[ií]s\b/i,                   // Spanish "país"
+      /\bcountry[\s_.]?of[\s_.]?residence\b/i,
+      /\bcountry[\s_.]?code\b/i,
+      /\bshipping[\s_.]?country\b/i,
+      /\bbilling[\s_.]?country\b/i,
+      /\bdelivery[\s_.]?country\b/i,
+      /\b(shipping|billing|delivery)Address\.country\b/i,
+    ],
+  },
+  // ── civil/marital status — narrowed to avoid "civil engineer" false hits ──
+  {
+    category: 'civil_status',
+    patterns: [
+      /\bmarital[\s_.]?status\b/i,
+      /\bcivil[\s_.]?status\b/i,
+      /\bcivil[\s_.]?state\b/i,
+      /\bestado[\s_.]?civil\b/i,
+      /\brelationship[\s_.]?status\b/i,
+    ],
+  },
+  // ── age / date of birth ────────────────────────────────────────────────────
+  {
+    category: 'age_dob',
+    patterns: [
+      /\bage\b/i,
+      /\bdob\b/i,
+      /\bdate[\s_.]?of[\s_.]?birth\b/i,
+      /\bbirth[\s_.]?date\b/i,
+      /\bbirthday\b/i,
+      /\bbirth[\s_.]?year\b/i,
+      /\byear[\s_.]?of[\s_.]?birth\b/i,
+      /\bfecha[\s_.]?nac(imiento)?\b/i,
+      /\bnacimiento\b/i,
     ],
   },
 ];

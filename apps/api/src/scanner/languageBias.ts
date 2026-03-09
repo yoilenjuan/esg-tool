@@ -70,11 +70,11 @@ const CUSTOM_RULES: CustomRule[] = [
     pattern: /\b(mayor[es]?\s+de\s+18|18\s+años|age\s*gate|must\s+be\s+18|18\s+or\s+over|over\s+18|years?\s+of\s+age)\b/gi,
     suggestion: 'Provide an alternative verification pathway for users unable to supply digital ID',
   },
-  // Binary gender copy — standalone label (e.g. "Male / Female" without a matching pair covered above)
+  // Binary gender copy — label pattern "Gender: Male / Female" (no non-binary option shown)
   {
     id: 'ESG_GENDER_BINARY_COPY',
-    description: 'Standalone binary gender label in page copy (Male/Female without inclusive alternative)',
-    pattern: /(?<!\w)(male|female)(?!\w)(?!.*\b(non-binary|other|prefer not|diverse|agender)\b)/gi,
+    description: 'Gender field label followed by binary-only options (no non-binary alternative shown)',
+    pattern: /(?:gender|sex|sexo|g[eé]nero|tratamiento)\s*[:\-]\s*\n?\s*(?:male|female|hombre|mujer)\b/gi,
     suggestion: 'Add non-binary or self-describe option alongside Male/Female labels',
   },
   // Gendered imperative copy — EN (e.g. "shop for her", "gifts for him")
