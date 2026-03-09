@@ -106,7 +106,9 @@ export async function analyseForms(
     p.hasForm ||
     p.category === 'register' ||
     p.category === 'login' ||
+    p.category === 'account' ||
     p.category === 'checkout' ||
+    p.category === 'cart' ||
     p.category === 'contact' ||
     p.category === 'newsletter' ||
     p.category === 'careers',

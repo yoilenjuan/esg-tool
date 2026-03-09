@@ -14,61 +14,82 @@ interface CustomRule {
 }
 
 const CUSTOM_RULES: CustomRule[] = [
-  // Gendered titles
+  // Gendered titles — ES + EN
   {
     id: 'ESG_GENDER_TITLE_SR',
-    description: 'Gendered salutation (Sr./Sra.) excludes non-binary customers',
-    pattern: /\b(Sr\.|Sra\.|señor|señora|señorita)\b/gi,
-    suggestion: 'Replace with "Cliente", "Persona", or ask for preferred salutation at profile stage',
+    description: 'Gendered salutation excludes non-binary customers',
+    pattern: /\b(Sr\.|Sra\.|señor|señora|señorita|Mr\.|Mrs\.|Miss\b|Ms\.)\b/gi,
+    suggestion: 'Replace with neutral alternatives ("Customer", "Person") or ask for preferred salutation at profile stage',
   },
-  // Binary gender only (male/female)
+  // Binary gender only — ES + EN
   {
     id: 'ESG_GENDER_BINARY_SELECT',
-    description: 'Binary-only gender options (Hombre/Mujer) exclude non-binary identities',
-    pattern: /\b(hombre|mujer)\b[\s/|\\]+\b(mujer|hombre)\b/gi,
+    description: 'Binary-only gender options exclude non-binary identities',
+    pattern: /\b(hombre|mujer)\b[\s/|\\]+\b(mujer|hombre)\b|\b(male|female)\b[\s/|\\]+\b(female|male)\b/gi,
     suggestion: 'Add non-binary option and/or free-text "prefer to self-describe" field',
   },
-  // Heteronormative assumptions
+  // Heteronormative assumptions — ES + EN
   {
     id: 'ESG_HETERONORMATIVE',
     description: 'Heteronormative copy assumes male-female couples',
-    pattern: /\b(marido|esposo|esposa|mujer e hijos|madre y padre|padres e hijos)\b/gi,
-    suggestion: 'Replace with "pareja", "persona a su cargo", "familia"',
+    pattern: /\b(marido|esposo|esposa|mujer e hijos|madre y padre|padres e hijos|husband|wife\b|boyfriend|girlfriend)\b/gi,
+    suggestion: 'Replace with "pareja" / "partner", "persona a su cargo" / "dependent", "familia" / "family"',
   },
-  // Ageist terms
+  // Ageist terms — ES + EN
   {
     id: 'ESG_AGEIST_TERM',
-    description: 'Ageist phrasing',
-    pattern: /\b(ancian[oa]s?|vejez|tercera edad|cuarto sector|adulto mayor)\b/gi,
-    suggestion: 'Replace with "personas mayores" or "clientes de todas las edades"',
+    description: 'Ageist phrasing in page copy',
+    pattern: /\b(ancian[oa]s?|vejez|tercera edad|cuarto sector|adulto mayor|elderly|senior citizen|the aged|old people|pensioner)\b/gi,
+    suggestion: 'Replace with "personas mayores" / "older adults" — age-neutral, respectful language',
   },
-  // Nationality bias: "extranjero" used pejoratively in commercial context
+  // Nationality bias — ES + EN
   {
     id: 'ESG_NATIONALITY_BIAS',
-    description: '"Extranjero" in context of identity requirements may exclude foreign nationals',
-    pattern: /\b(extranjero|extranjera)\b/gi,
-    suggestion: 'Clarify policy applies to all customers; consider nationality-neutral phrasing',
+    description: '"Extranjero" / "foreign" in identity context may exclude non-nationals',
+    pattern: /\b(extranjero|extranjera|foreign national|non-resident alien|non-citizen)\b/gi,
+    suggestion: 'Clarify policy applies to all customers regardless of nationality',
   },
-  // Nationality-only nationality field labels
+  // Nationality field labels — ES + EN
   {
     id: 'ESG_NATIONALITY_SELECT_LABEL',
-    description: 'Label "Nacionalidad" may be legally required but check GDPR necessity',
-    pattern: /\bnacionalidad\b/gi,
-    suggestion: 'Ensure GDPR legal basis is documented; do not use for marketing segmentation',
+    description: 'Nationality field detected — verify GDPR legal basis',
+    pattern: /\bnacionalidad\b|\bnationality\b/gi,
+    suggestion: 'Ensure a documented GDPR legal basis exists; do not use for marketing segmentation',
   },
-  // Document exclusion: "required" DNI/NIF only blocks non-Spanish
+  // Document exclusion — ES + EN
   {
     id: 'ESG_DOCUMENT_SPANISH_ONLY',
-    description: 'Spanish-only document types (DNI must be 8 digits) block foreign nationals',
-    pattern: /\b(dni)\b.*\b(obligatorio|requerido|required)\b/gi,
-    suggestion: 'Accept NIE, passport, and other EU document types as alternatives',
+    description: 'National ID / document field may block foreign nationals',
+    pattern: /\b(dni)\b.*\b(obligatorio|requerido|required)\b|\b(national\s+id|id\s+number)\b.*\b(required|mandatory|obligatory)\b/gi,
+    suggestion: 'Accept NIE, passport, and other EU/international document types as valid alternatives',
   },
-  // Age gating without alternative
+  // Age gating — ES + EN
   {
     id: 'ESG_AGE_GATE_ONLY',
-    description: 'Age gate without alternative identity verification excludes older customers with no ID',
-    pattern: /\b(mayor[es]?\s+de\s+18|18\s+años|age\s*gate)\b/gi,
-    suggestion: 'Provide alternative verification pathway for customers unable to supply digital ID',
+    description: 'Age gate detected — ensure alternative verification pathway exists',
+    pattern: /\b(mayor[es]?\s+de\s+18|18\s+años|age\s*gate|must\s+be\s+18|18\s+or\s+over|over\s+18|years?\s+of\s+age)\b/gi,
+    suggestion: 'Provide an alternative verification pathway for users unable to supply digital ID',
+  },
+  // Binary gender copy — standalone label (e.g. "Male / Female" without a matching pair covered above)
+  {
+    id: 'ESG_GENDER_BINARY_COPY',
+    description: 'Standalone binary gender label in page copy (Male/Female without inclusive alternative)',
+    pattern: /(?<!\w)(male|female)(?!\w)(?!.*\b(non-binary|other|prefer not|diverse|agender)\b)/gi,
+    suggestion: 'Add non-binary or self-describe option alongside Male/Female labels',
+  },
+  // Gendered imperative copy — EN (e.g. "shop for her", "gifts for him")
+  {
+    id: 'ESG_GENDERED_COPY_EN',
+    description: 'Gender-targeted copy segments customers by assumed gender',
+    pattern: /\b(for\s+her|for\s+him|gifts?\s+for\s+(?:him|her)|shop\s+(?:his|her)\s+style|men['']?s\s+(?:collection|section)|women['']?s\s+(?:collection|section))\b/gi,
+    suggestion: 'Use product-category language instead of gender: "Coffee Machines", "Accessories" rather than "For Her"',
+  },
+  // Title/salutation field label — EN
+  {
+    id: 'ESG_TITLE_FIELD_EN',
+    description: 'Title/salutation field with binary options (Mr/Mrs) detected',
+    pattern: /\b(title|salutation|honorific)\b[\s\S]{0,60}\b(mr|mrs|miss|ms)\b/gi,
+    suggestion: 'Add "Mx" or "Prefer not to say" option, or remove the title field entirely',
   },
 ];
 

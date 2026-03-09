@@ -65,7 +65,13 @@ function avGP(rule: RuleResult) {
 
 function buildGenderDimension(form: FormAnalysis, langBias: LanguageBiasAnalysis, evidences: EvidenceRecord[]): DimensionResult {
   const genderIssues = langBias.issues.filter((i) =>
-    ['ESG_GENDER_TITLE_SR', 'ESG_GENDER_BINARY_SELECT', 'ESG_GENDER_BINARY_COPY'].includes(i.ruleId),
+    [
+      'ESG_GENDER_TITLE_SR',
+      'ESG_GENDER_BINARY_SELECT',
+      'ESG_GENDER_BINARY_COPY',
+      'ESG_GENDERED_COPY_EN',
+      'ESG_TITLE_FIELD_EN',
+    ].includes(i.ruleId),
   );
   const rule = classifyGender({
     fields: ruleFields(form, 'gender'),
@@ -125,7 +131,9 @@ function buildEAIDimension(analysis: EAIAnalysis, evidences: EvidenceRecord[]): 
 }
 
 function buildNationalityDimension(form: FormAnalysis, langBias: LanguageBiasAnalysis, evidences: EvidenceRecord[]): DimensionResult {
-  const natIssues = langBias.issues.filter((i) => i.ruleId === 'ESG_NATIONALITY_BIAS');
+  const natIssues = langBias.issues.filter((i) =>
+    ['ESG_NATIONALITY_BIAS', 'ESG_NATIONALITY_SELECT_LABEL'].includes(i.ruleId),
+  );
   const rule = classifyNationality({
     fields: ruleFields(form, 'nationality'),
     nationalityLanguageIssueCount: natIssues.length,
