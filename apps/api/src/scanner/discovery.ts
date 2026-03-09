@@ -19,7 +19,17 @@ const PRIORITY_PATTERNS: RegExp[] = [
 
 // ─── Blocked resource types (for fast crawling) ───────────────────────────────
 const BLOCKED_TYPES = new Set(['image', 'media', 'font', 'stylesheet']);
-
+// ─── Paths to probe even if not linked (SPAs / modal-based auth flows) ───────
+// Injected into the BFS queue at startup so register/login/checkout pages are
+// always attempted even when the SPA never links to them via <a href>.
+const PROBE_PATHS: string[] = [
+  '/register', '/registro', '/sign-up', '/signup', '/create-account',
+  '/new-account', '/account/create', '/account/register', '/account/signup',
+  '/join', '/en/register', '/es/registro', '/us/en/account/create',
+  '/login', '/sign-in', '/signin', '/account/login', '/iniciar-sesion',
+  '/checkout', '/cart', '/basket', '/carrito', '/bolsa', '/tramitar',
+  '/account', '/my-account', '/mi-cuenta', '/profile', '/perfil',
+];
 // ─── Category detector ────────────────────────────────────────────────────────
 function categorizePage(url: string): PageCategory {
   const u = url.toLowerCase();
@@ -116,7 +126,14 @@ export async function discoverPages(
   const disallowed = await getRobotsDisallowed(origin);
 
   const visited = new Set<string>();
-  const queue: string[] = [baseUrl];
+
+  // Seed the queue with the entry URL + high-value probe paths.
+  // Probe paths are resolved against the site origin so they work for any domain.
+  const probeUrls = PROBE_PATHS.map((p) => {
+    try { return new URL(p, origin).toString(); } catch { return ''; }
+  }).filter(Boolean);
+
+  const queue: string[] = [baseUrl, ...probeUrls.filter((u) => u !== baseUrl)];
   const pages: CrawledPage[] = [];
   let page: Page | null = null;
 

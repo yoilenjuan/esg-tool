@@ -194,6 +194,70 @@ export function buildRetailSnapshot(
         }
       });
     });
+
+    // ── Second pass: inputs/selects OUTSIDE <form> (SPA / React pattern) ─────
+    // Many modern SPAs (React, Vue, Angular) render forms as plain <div>+<input>
+    // without a wrapping <form> tag. We scan them here and skip duplicates.
+    const seenSelectors = new Set<string>();
+    // track what we already captured from <form> elements
+    inputs.forEach((f) => seenSelectors.add(`${f.pageUrl}::${f.name}::${f.inputType}`));
+    selects.forEach((s) => seenSelectors.add(`${s.pageUrl}::${s.name}::select`));
+
+    $('input, textarea').each((_, el) => {
+      // Skip if element is inside a <form> — already handled above
+      if ($(el).closest('form').length > 0) return;
+
+      const name        = normalize($(el).attr('name') ?? $(el).attr('id') ?? '');
+      const inputType   = ($(el).attr('type') ?? 'text').toLowerCase();
+      if (['hidden', 'submit', 'button', 'reset', 'image'].includes(inputType)) return;
+
+      const key = `${pageUrl}::${name}::${inputType}`;
+      if (seenSelectors.has(key)) return;
+      seenSelectors.add(key);
+
+      const required    = $(el).is('[required]') || $(el).attr('aria-required') === 'true';
+      const placeholder = $(el).attr('placeholder') ?? '';
+      const id          = $(el).attr('id') ?? '';
+      let label = '';
+      if (id) label = $(`label[for="${id}"]`).text().trim();
+      if (!label) label = $(el).closest('label').text().trim();
+      if (!label) label = $(el).attr('aria-label') ?? '';
+      if (!label) label = $(el).attr('placeholder') ?? '';
+      if (!label) {
+        // data-label or title fallback
+        label = $(el).attr('data-label') ?? $(el).attr('title') ?? '';
+      }
+
+      if (!label && required) missingLabelCount++;
+      forms.push({ name, inputType, required, label, pageUrl });
+      inputs.push({ name, inputType, required, placeholder, label, pageUrl });
+    });
+
+    $('select').each((_, el) => {
+      if ($(el).closest('form').length > 0) return;
+
+      const name     = normalize($(el).attr('name') ?? $(el).attr('id') ?? '');
+      const key      = `${pageUrl}::${name}::select`;
+      if (seenSelectors.has(key)) return;
+      seenSelectors.add(key);
+
+      const required = $(el).is('[required]') || $(el).attr('aria-required') === 'true';
+      const id       = $(el).attr('id') ?? '';
+      let label = '';
+      if (id) label = $(`label[for="${id}"]`).text().trim();
+      if (!label) label = $(el).attr('aria-label') ?? '';
+      if (!label) label = $(el).attr('data-label') ?? '';
+
+      const options: SelectOption[] = [];
+      $(el).find('option').each((_, opt) => {
+        const value = ($(opt).val() as string) ?? '';
+        const text  = $(opt).text().trim();
+        if (value || text) options.push({ value: normalize(value), text: normalize(text) });
+      });
+
+      selects.push({ name, label: normalize(label), required, options, pageUrl });
+      if (!label && required) missingLabelCount++;
+    });
   }
 
   // Determine isB2C: true when no B2B-only signals found

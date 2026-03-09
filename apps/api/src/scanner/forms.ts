@@ -116,8 +116,13 @@ export async function analyseForms(
   try {
     for (const crawledPage of formPages) {
       try {
-        await page.goto(crawledPage.url, { timeout: 20_000, waitUntil: 'domcontentloaded' });
-        await page.waitForTimeout(800);
+        await page.goto(crawledPage.url, { timeout: 25_000, waitUntil: 'domcontentloaded' });
+        // SPAs (React / Angular / Vue) render forms via JS after the initial HTML load.
+        // Wait for the network to settle so components have time to mount.
+        try {
+          await page.waitForLoadState('networkidle', { timeout: 4_000 });
+        } catch { /* timeout acceptable — continue with whatever rendered */ }
+        await page.waitForTimeout(1_200);
 
         const fields = await page.evaluate((): Array<{
           tagName: string;
