@@ -51,12 +51,17 @@ async function extractImages(
     await page.goto(pageUrl, { timeout: 20_000, waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(800);
 
-    return page.evaluate(() => {
-      const imgs: ImageInfo[] = [];
+    // NOTE: must use `await` here — without it the finally block closes the page
+    // before page.evaluate resolves, triggering "Target page has been closed".
+    const imgs = await page.evaluate(() => {
+      const results: Array<{
+        alt: string; width: number; height: number;
+        src: string; figCaption: string; ariaLabel: string;
+      }> = [];
       document.querySelectorAll('img').forEach((img) => {
         const rect = img.getBoundingClientRect();
-        const w = img.naturalWidth || rect.width;
-        const h = img.naturalHeight || rect.height;
+        const w = (img as HTMLImageElement).naturalWidth || rect.width;
+        const h = (img as HTMLImageElement).naturalHeight || rect.height;
 
         // Only large images (likely editorial/hero content, not icons)
         if (w < 200 || h < 150) return;
@@ -65,17 +70,19 @@ async function extractImages(
         const fig = img.closest('figure');
         const cap = fig?.querySelector('figcaption')?.textContent?.trim() ?? '';
 
-        imgs.push({
-          alt: img.alt?.trim() ?? '',
+        results.push({
+          alt: (img as HTMLImageElement).alt?.trim() ?? '',
           width: w,
           height: h,
-          src: img.src,
+          src: (img as HTMLImageElement).src,
           figCaption: cap,
           ariaLabel: img.getAttribute('aria-label') ?? '',
         });
       });
-      return imgs;
-    }) as Promise<ImageInfo[]>;
+      return results;
+    });
+
+    return imgs as ImageInfo[];
   } finally {
     await page.close().catch(() => {});
   }
@@ -154,8 +161,15 @@ export async function analyseVisualDiversity(
       const imgs = await extractImages(ctx, page.url);
       allImages.push(...imgs);
       pagesAnalysed.push(page.url);
-    } catch {
-      // Skip on error
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      // If the browser context itself was closed, abort early rather than
+      // repeatedly failing on every remaining page.
+      if (/context|browser|target.*closed/i.test(msg)) {
+        console.warn('[visualDiversity] Browser context closed — stopping image analysis early:', msg);
+        break;
+      }
+      console.warn(`[visualDiversity] Skipping ${page.url}:`, msg);
     }
   }
 
