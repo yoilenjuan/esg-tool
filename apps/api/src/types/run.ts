@@ -244,6 +244,8 @@ export interface ScanRunResult {
     eaiAnalysis: EAIAnalysis;
     languageBias: LanguageBiasAnalysis;
     visualDiversity: VisualDiversityAnalysis;
+    /** Ordered list of crawled pages — url + category — for crawl-log debugging */
+    crawledPages?: Array<{ url: string; category: string }>;
   };
 }
 

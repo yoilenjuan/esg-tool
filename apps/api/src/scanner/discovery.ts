@@ -41,6 +41,10 @@ function categorizePage(url: string): PageCategory {
   if (/newsletter|suscribi|subscrib/.test(u)) return 'newsletter';
   if (/contact|ayuda/.test(u)) return 'contact';
   if (/trabaja|careers|empleo|jobs/.test(u)) return 'careers';
+  // Product detail pages (must come before generic 'other')
+  if (/\/products?\//i.test(u) || /\/p\/[^/]/i.test(u) || /\/item\/|\bsku\b/i.test(u)) return 'product';
+  // Marketing / campaign / collection pages
+  if (/\/campaign\/|\/promo\/|\/landing\/|\/collection\//i.test(u)) return 'marketing';
   const path = (() => { try { return new URL(url).pathname; } catch { return url; } })();
   if (path === '/' || path === '') return 'home';
   return 'other';
@@ -133,7 +137,12 @@ export async function discoverPages(
     try { return new URL(p, origin).toString(); } catch { return ''; }
   }).filter(Boolean);
 
-  const queue: string[] = [baseUrl, ...probeUrls.filter((u) => u !== baseUrl)];
+  // Seed queue: base URL first, then probe paths — all at depth 0 (priority front-of-queue)
+  const seedUrls = [baseUrl, ...probeUrls.filter((u) => u !== baseUrl)];
+  const queue: string[] = [...seedUrls];
+  // Track BFS depth so we can log it per visit
+  const depthMap = new Map<string, number>();
+  for (const su of seedUrls) depthMap.set(su, 0);
   const pages: CrawledPage[] = [];
   let page: Page | null = null;
 
@@ -150,10 +159,9 @@ export async function discoverPages(
     });
 
     while (queue.length > 0 && pages.length < maxPages) {
-      const raw = sortByPriority(queue.splice(0, queue.length));
-      const url = raw.shift()!;
-      // Put the rest back for next iteration
-      queue.push(...raw);
+      // FIFO dequeue — PROBE_PATHS are already at the front from initialisation;
+      // only newly-discovered links are sorted (see link-extraction block below).
+      const url = queue.shift()!;
 
       if (visited.has(url)) continue;
       if (isDisallowed(url, origin, disallowed)) continue;
@@ -193,12 +201,15 @@ export async function discoverPages(
           return [html, t, f, text];
         });
 
-        // Extract links for BFS
+        // Extract links for BFS — sort only the new batch (avoids O(n log n) full-queue sort)
         const links = await extractLinks(page, origin);
-        for (const link of links) {
-          if (!visited.has(link) && !queue.includes(link)) {
-            queue.push(link);
-          }
+        const currentDepth = depthMap.get(url) ?? 0;
+        const newLinks = sortByPriority(
+          links.filter((l) => !visited.has(l) && !queue.includes(l)),
+        );
+        for (const link of newLinks) {
+          depthMap.set(link, currentDepth + 1);
+          queue.push(link);
         }
       } catch {
         // Navigation error — record partial info
@@ -218,6 +229,16 @@ export async function discoverPages(
       };
 
       pages.push(crawled);
+      // Structured crawl log — one line per visited page for debugging and report attachment
+      console.log(JSON.stringify({
+        event: 'CRAWL_VISIT',
+        visitOrder: pages.length,
+        url: crawled.url,
+        category: crawled.category,
+        depth: depthMap.get(url) ?? 0,
+        httpStatus: crawled.httpStatus,
+        loadTimeMs: crawled.loadTimeMs,
+      }));
       onPageFound(pages.length);
     }
   } finally {

@@ -351,7 +351,10 @@ export async function runApiScan(
           primaryScore,
           conversionExposureScore,
           conversionExposureLevel,
-          _raw: { formAnalysis, eaiAnalysis, languageBias, visualDiversity },
+          _raw: {
+            formAnalysis, eaiAnalysis, languageBias, visualDiversity,
+            crawledPages: crawledPages.map((p) => ({ url: p.url, category: p.category })),
+          },
         },
         runDir,
         browser,
@@ -378,7 +381,10 @@ export async function runApiScan(
       primaryScore,
       conversionExposureScore,
       conversionExposureLevel,
-      _raw: { formAnalysis, eaiAnalysis, languageBias, visualDiversity },
+      _raw: {
+        formAnalysis, eaiAnalysis, languageBias, visualDiversity,
+        crawledPages: crawledPages.map((p) => ({ url: p.url, category: p.category })),
+      },
     };
 
     // Save report.json
