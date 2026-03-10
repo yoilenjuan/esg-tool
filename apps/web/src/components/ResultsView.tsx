@@ -17,11 +17,17 @@ interface ResultsViewProps {
 // ─── Score helpers ─────────────────────────────────────────────────────────────
 function calcLegacyScore(dimensions: ScanRunResult['dimensions']): number {
   if (!dimensions.length) return 0;
+  // When ≥5 of 8 dimensions return 'Not Requested' the scan was data-sparse
+  // (SPA rendering failures, auth-gated pages, etc.). A flat 70 weight would
+  // produce a misleadingly high green score when the scanner effectively found
+  // nothing. Downgrade to 50 (neutral) to surface the data gap.
+  const notRequestedCount = dimensions.filter((d) => d.status === 'Not Requested').length;
+  const notRequestedWeight = notRequestedCount >= 5 ? 50 : 70;
   const W: Record<ComplianceStatus, number> = {
     Complies: 100,
     'Partially Complies': 50,
     'Does Not Comply': 0,
-    'Not Requested': 70,
+    'Not Requested': notRequestedWeight,
     'Mixed / Multi-flow': 40,
   };
   const total = dimensions.reduce(
@@ -330,6 +336,35 @@ export function ResultsView({ result, onReset }: ResultsViewProps) {
           </button>
         </div>
       </div>
+
+      {/* ── Data coverage warning ────────────────────────────────────────
+           Shown when ≥5 of 8 legacy dimensions are 'Not Requested'.
+           This indicates the crawler could not reach key pages (SPA auth
+           walls, JavaScript-rendered forms) and results may be incomplete. */}
+      {counts.notRequested >= 5 && (
+        <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl px-5 py-4 text-sm text-amber-900">
+          <svg
+            className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+          <div>
+            <span className="font-bold">Limited data coverage:</span>{' '}
+            {counts.notRequested} of 8 dimensions could not be evaluated — the
+            site may use JavaScript-rendered forms or authentication-gated pages
+            that the crawler could not reach. Results may understate actual
+            inclusivity gaps. Consider re-running with a deeper scan depth.
+          </div>
+        </div>
+      )}
 
       {/* ── Conversion Exposure card (retail only) ──────────────────────── */}
       <ConversionExposureCard result={result} />

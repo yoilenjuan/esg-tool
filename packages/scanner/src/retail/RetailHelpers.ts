@@ -134,12 +134,24 @@ export function isAgeField(nameOrLabel: string): boolean {
 }
 
 /**
- * Returns true when the field name/label looks like a gender field.
+ * Returns true when the field name/label looks like a gender / title /
+ * pronoun field.
+ *
+ * Kept in sync with the CATEGORY_PATTERNS['gender'] list in forms.ts so that
+ * both engines classify the same fields consistently.
  */
 export function isGenderField(nameOrLabel: string): boolean {
   return includesAny(nameOrLabel, [
-    'gender', 'genero', 'sexo', 'sex', 'titulo', 'title',
-    'salutation', 'tratamiento', 'honorific',
+    // Core gender signals
+    'gender', 'genero', 'sexo',
+    // 'sex' without 'sexual' — normalize() strips accents so the check is
+    // substring-based; we rely on includesAny which does an exact substring
+    // match after normalisation, so 'sexo' above handles Spanish explicitly.
+    'sex',
+    // Title / salutation fields (Mr/Mrs/Mx dropdowns are a gender proxy)
+    'titulo', 'title', 'salutation', 'honorific', 'tratamiento',
+    // Pronoun preference fields
+    'pronoun',
   ]);
 }
 
@@ -151,11 +163,18 @@ export function isEmailField(nameOrLabel: string): boolean {
 }
 
 /**
- * Returns true when the field name looks like a country selector.
+ * Returns true when the field name looks like a country-of-residence or
+ * shipping/billing country selector.
+ *
+ * 'nation' and 'region' are intentionally excluded: 'nation' overlaps with
+ * 'national_id' / 'nationality' and 'region' maps to State/Province dropdowns
+ * in address forms — both produce false positives on the country dimension.
  */
 export function isCountryField(nameOrLabel: string): boolean {
   return includesAny(nameOrLabel, [
-    'country', 'pais', 'país', 'nation', 'region',
+    'country', 'pais',
+    'shipping_country', 'billingcountry', 'delivery_country',
+    'countrycode', 'country_code',
   ]);
 }
 

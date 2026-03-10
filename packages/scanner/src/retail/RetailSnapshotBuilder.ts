@@ -260,10 +260,18 @@ export function buildRetailSnapshot(
     });
   }
 
-  // Determine isB2C: true when no B2B-only signals found
+  // Determine isB2C heuristic.
+  // Weak signals ('company', 'empresa') appear in every commercial footer and
+  // about-page — treating them as B2B indicators causes virtually every retail
+  // site to be misclassified as B2B, permanently suppressing the 25-pt
+  // MANDATORY_ID_B2C penalty. We require at least one strong B2B signal, or
+  // two weak signals co-occurring, before classifying as B2B.
   const allText = pages.map((p) => p.html).join(' ').toLowerCase();
-  const b2bSignals = ['empresa', 'company', 'cif', 'vat number', 'b2b', 'business account'];
-  const isB2C = !b2bSignals.some((sig) => allText.includes(sig));
+  const STRONG_B2B_SIGNALS = ['cif', 'vat number', 'b2b', 'business account', 'empresa cliente'];
+  const WEAK_B2B_SIGNALS   = ['company', 'empresa'];
+  const strongHits = STRONG_B2B_SIGNALS.filter((s) => allText.includes(s)).length;
+  const weakHits   = WEAK_B2B_SIGNALS.filter((s) => allText.includes(s)).length;
+  const isB2C = strongHits === 0 && weakHits < 2;
 
   return {
     url: entryUrl,

@@ -131,9 +131,13 @@ function buildEAIDimension(analysis: EAIAnalysis, evidences: EvidenceRecord[]): 
 }
 
 function buildNationalityDimension(form: FormAnalysis, langBias: LanguageBiasAnalysis, evidences: EvidenceRecord[]): DimensionResult {
-  const natIssues = langBias.issues.filter((i) =>
-    ['ESG_NATIONALITY_BIAS', 'ESG_NATIONALITY_SELECT_LABEL'].includes(i.ruleId),
-  );
+  // ESG_NATIONALITY_SELECT_LABEL is intentionally excluded from the count.
+  // The word 'nationality' appears in FAQ pages, shipping policy, and footers
+  // of nearly every international retailer — including it in the issue count
+  // would cause a false 'Partially Complies' on sites that collect no
+  // nationality data at all. It is still emitted in the PDF report as
+  // an informational finding but must not drive dimension scoring.
+  const natIssues = langBias.issues.filter((i) => i.ruleId === 'ESG_NATIONALITY_BIAS');
   const rule = classifyNationality({
     fields: ruleFields(form, 'nationality'),
     nationalityLanguageIssueCount: natIssues.length,

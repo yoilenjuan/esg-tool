@@ -85,11 +85,16 @@ export async function probeEmailEAI(
   const attempts: EAIProbeAttempt[] = [];
   const probedPages: string[] = [];
 
-  // Only look at pages with email fields
+  // Only look at pages with email fields.
+  // 'account' is included alongside 'register' because many sites use
+  // /account/create or /account/signup as their registration URL — the
+  // forms.ts formPages filter was updated to include this category and the
+  // EAI probe must mirror that change to avoid missing registration pages.
   const emailPages = pages.filter((p) =>
     p.hasForm &&
     (p.category === 'register' ||
       p.category === 'login' ||
+      p.category === 'account' ||
       p.category === 'newsletter' ||
       p.category === 'checkout' ||
       /email/i.test(p.html)),
