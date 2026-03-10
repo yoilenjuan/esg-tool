@@ -48,6 +48,9 @@ const CATEGORY_COLORS: Record<string, string> = {
 export function ScanProgressPanel({ runId, onComplete, onError }: ScanProgressPanelProps) {
   const [progress, setProgress] = useState<ScanProgress | null>(null);
   const [elapsed, setElapsed] = useState('0s');
+  // Persistent accumulated crawl log — never resets during an active scan
+  const [crawlLog, setCrawlLog] = useState<Array<{ url: string; category: string }>>([]);
+  const seenUrlsRef = useRef(new Set<string>());
   const clockRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const doneRef = useRef(false);
 
@@ -71,8 +74,17 @@ export function ScanProgressPanel({ runId, onComplete, onError }: ScanProgressPa
       if (doneRef.current || cancelled) return;
       try {
         const p = await getProgress(runId);
-        if (cancelled) return;
-        setProgress(p);
+        if (!cancelled) {
+          setProgress(p);
+          // Accumulate crawl log — append pages we haven't seen yet (newest first)
+          if (p.recentPages && p.recentPages.length > 0) {
+            const fresh = p.recentPages.filter((rp) => !seenUrlsRef.current.has(rp.url));
+            if (fresh.length > 0) {
+              fresh.forEach((rp) => seenUrlsRef.current.add(rp.url));
+              setCrawlLog((prev) => [...fresh, ...prev]);
+            }
+          }
+        }
 
         if (p.status === 'completed' && !doneRef.current) {
           doneRef.current = true;
@@ -110,7 +122,8 @@ export function ScanProgressPanel({ runId, onComplete, onError }: ScanProgressPa
   const step = progress?.currentStep ?? 'Initialising…';
   const pagesScanned = progress?.pagesScanned ?? 0;
   const pagesDiscovered = progress?.pagesDiscovered ?? 0;
-  const recentPages = progress?.recentPages ?? [];
+  // Use accumulated log —  persists after discovery phase ends
+  const displayLog = crawlLog;
 
   const activeStep = PIPELINE_STEPS.findIndex((s) =>
     step.toLowerCase().includes(s.toLowerCase()),
@@ -194,19 +207,23 @@ export function ScanProgressPanel({ runId, onComplete, onError }: ScanProgressPa
         This may take several minutes depending on scan depth and site complexity.
       </p>
 
-      {/* ── Live Crawl Feed ────────────────────────────────────────── */}
-      {recentPages.length > 0 && (
+      {/* ── Crawl Log ──────────────────────────────────────────── */}
+      {displayLog.length > 0 && (
         <div className="border border-slate-100 rounded-xl p-4 bg-slate-50">
           <div className="text-[10px] font-bold tracking-widest uppercase text-slate-400 mb-3 flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse inline-block" />
-            Live crawl feed
-            <span className="ml-auto text-slate-300 normal-case tracking-normal font-normal">
-              {pagesDiscovered} page{pagesDiscovered !== 1 ? 's' : ''} found
+            {pct < 100 ? (
+              <span className="w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse inline-block" />
+            ) : (
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />
+            )}
+            Pages crawled
+            <span className="ml-auto text-slate-400 normal-case tracking-normal font-semibold">
+              {displayLog.length} page{displayLog.length !== 1 ? 's' : ''}
             </span>
           </div>
-          <div className="space-y-2 max-h-44 overflow-y-auto">
-            {recentPages.map((p, i) => (
-              <div key={i} className="flex items-center gap-2 text-xs">
+          <div className="space-y-2 max-h-52 overflow-y-auto">
+            {displayLog.map((p, i) => (
+              <div key={p.url} className="flex items-center gap-2 text-xs">
                 <span
                   className={clsx(
                     'shrink-0 font-bold px-1.5 py-0.5 rounded text-[9px] uppercase tracking-wide',
@@ -221,6 +238,11 @@ export function ScanProgressPanel({ runId, onComplete, onError }: ScanProgressPa
                 >
                   {p.url.replace(/^https?:\/\//, '')}
                 </span>
+                {i === 0 && pct < 100 && (
+                  <span className="shrink-0 text-[9px] text-brand-400 font-semibold animate-pulse">
+                    now
+                  </span>
+                )}
               </div>
             ))}
           </div>

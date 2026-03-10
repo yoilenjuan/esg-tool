@@ -401,10 +401,14 @@ export function ResultsView({ result, onReset }: ResultsViewProps) {
       </div>
 
       {/* ── Data coverage warning ────────────────────────────────────────
-           Shown when ≥5 of 8 legacy dimensions are 'Not Requested'.
-           This indicates the crawler could not reach key pages (SPA auth
-           walls, JavaScript-rendered forms) and results may be incomplete. */}
-      {counts.notRequested >= 5 && (
+           Shown only when results are truly sparse:
+           • 6+ of 8 dimensions NOT evaluated, OR
+           • 5+ NOT evaluated AND fewer than 8 pages were scanned
+             (very shallow crawl — likely missed auth/register flows).
+           A site that legitimately has only gender + EAI forms (5 Not
+           Requested) but was fully crawled does NOT trigger this banner. */}
+      {(counts.notRequested >= 6 ||
+        (counts.notRequested >= 5 && result.pagesScanned.length < 8)) && (
         <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl px-5 py-4 text-sm text-amber-900">
           <svg
             className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5"

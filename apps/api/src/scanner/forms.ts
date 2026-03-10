@@ -47,16 +47,22 @@ const CATEGORY_PATTERNS: Array<{ category: FormFieldCategory; patterns: RegExp[]
       /\bpa[ií]s[\s_.]?nacimiento\b/i,
     ],
   },
-  // ── gender — includes title/salutation fields ──────────────────────────────
+  // ── gender — includes title/salutation fields (EN + ES + FR + DE) ──────────
   {
     category: 'gender',
     patterns: [
       /\bgender\b/i,
-      /\bsex\b(?!ual)/i,                // "sex" but not "sexual"
+      /\bsex\b(?!ual)/i,              // "sex" but not "sexual"
       /\bg[eé]nero\b/i,
       /\bsexo\b/i,
       /\bpronoun\b/i,
-      /\b(title|salutation|honorific|tratamiento|t[ií]tulo)\b/i,
+      // Title / salutation / honorific — EN + ES + FR + DE + NL
+      /\b(title|salutation|honorific)\b/i,
+      /\b(tratamiento|t[ií]tulo|salutaci[oó]n)\b/i,  // ES
+      /\bcivility\b/i,                // EN/FR: "civility" dropdown
+      /\bprefix\b/i,                  // very common: field name "prefix" = Mr/Mrs
+      /\banrede\b/i,                  // DE: "Anrede"
+      /\baanhef\b/i,                  // NL
     ],
   },
   // ── country: billing/shipping/residence — NOT region (= state/province) ───
@@ -101,13 +107,37 @@ const CATEGORY_PATTERNS: Array<{ category: FormFieldCategory; patterns: RegExp[]
   },
 ];
 
-function classifyField(name: string, id: string, label: string, placeholder: string, ariaLabel: string): FormFieldCategory {
+// ─── Option-text gender-title detector ──────────────────────────────────────
+// If a select/radio has few options and at least one matches a well-known
+// title token, it is very likely a salutation field regardless of field name.
+// Examples: ["Sr.", "Sra.", "Dr."], ["Mr", "Mrs", "Ms", "Mx"], ["Herr", "Frau"]
+const GENDER_TITLE_OPTION_RE =
+  /\b(sr|sra|srt|señor|señora|don|doña|mr|mrs|ms|miss|mx|dr|dra|prof|herr|frau|m\.?me|monsieur|madame)\b\.?/i;
+
+function hasGenderTitleOptions(options: Array<{ value: string; label: string }>): boolean {
+  // Title dropdowns typically have 2–10 entries
+  if (options.length === 0 || options.length > 12) return false;
+  return options.some(
+    (o) => GENDER_TITLE_OPTION_RE.test(o.label) || GENDER_TITLE_OPTION_RE.test(o.value),
+  );
+}
+
+function classifyField(
+  name: string,
+  id: string,
+  label: string,
+  placeholder: string,
+  ariaLabel: string,
+  options: Array<{ value: string; label: string }> = [],
+): FormFieldCategory {
   const haystack = [name, id, label, placeholder, ariaLabel].join(' ');
   for (const { category, patterns } of CATEGORY_PATTERNS) {
     for (const p of patterns) {
       if (p.test(haystack)) return category;
     }
   }
+  // Fallback: inspect option text for gender title tokens
+  if (hasGenderTitleOptions(options)) return 'gender';
   return 'other';
 }
 
@@ -239,7 +269,7 @@ export async function analyseForms(
         if (fields.length > 0) {
           pagesWithForms.push(crawledPage.url);
           for (const f of fields) {
-            const category = classifyField(f.name, f.id, f.label, f.placeholder, f.ariaLabel);
+            const category = classifyField(f.name, f.id, f.label, f.placeholder, f.ariaLabel, f.options);
             allFields.push({
               ...f,
               category,
