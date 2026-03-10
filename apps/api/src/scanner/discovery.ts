@@ -124,7 +124,7 @@ function sortByPriority(urls: string[]): string[] {
 export async function discoverPages(
   ctx: BrowserContext,
   config: ScannerRunConfig,
-  onPageFound: (count: number) => void,
+  onPageFound: (count: number, page?: CrawledPage) => void,
 ): Promise<CrawledPage[]> {
   const { baseUrl, origin, maxPages, navigationTimeoutMs, pageLoadDelayMs } = config;
   const disallowed = await getRobotsDisallowed(origin);
@@ -183,7 +183,7 @@ export async function discoverPages(
 
         // Only recurse 2xx pages
         if (httpStatus >= 400) {
-          onPageFound(pages.length);
+          onPageFound(pages.length, undefined);
           continue;
         }
 
@@ -239,7 +239,7 @@ export async function discoverPages(
         httpStatus: crawled.httpStatus,
         loadTimeMs: crawled.loadTimeMs,
       }));
-      onPageFound(pages.length);
+      onPageFound(pages.length, crawled);
     }
   } finally {
     await page?.close().catch(() => {});

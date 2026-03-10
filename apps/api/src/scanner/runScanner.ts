@@ -167,7 +167,13 @@ export async function runApiScan(
   const startedAt = new Date().toISOString();
   const allEvidences: EvidenceRecord[] = [];
 
-  const progress = (step: string, pct: number, pagesFound = 0, pagesScanned = 0) => {
+  const progress = (
+    step: string,
+    pct: number,
+    pagesFound = 0,
+    pagesScanned = 0,
+    recentPages?: Array<{ url: string; category: string }>,
+  ) => {
     onProgress({
       runId,
       status: 'running',
@@ -176,6 +182,7 @@ export async function runApiScan(
       pagesScanned,
       percentComplete: pct,
       startedAt,
+      ...(recentPages ? { recentPages } : {}),
     });
   };
 
@@ -226,10 +233,22 @@ export async function runApiScan(
     const t1 = Date.now();
     log(runId, 'discovery', 'Starting page crawl', { url: options.url, maxPages: config.maxPages });
     let discoveredCount = 0;
-    const crawledPages = await discoverPages(ctx, config, (count) => {
+    // Rolling buffer of last 6 crawled pages — forwarded to UI as a live feed
+    const recentBuffer: Array<{ url: string; category: string }> = [];
+    const crawledPages = await discoverPages(ctx, config, (count, page?) => {
       discoveredCount = count;
+      if (page) {
+        recentBuffer.unshift({ url: page.url, category: page.category });
+        if (recentBuffer.length > 6) recentBuffer.pop();
+      }
       log(runId, 'discovery', `Pages discovered so far: ${count}`);
-      progress('Discovering pages', 5 + Math.min(count, config.maxPages) / config.maxPages * 20, discoveredCount, 0);
+      progress(
+        'Discovering pages',
+        5 + Math.min(count, config.maxPages) / config.maxPages * 20,
+        discoveredCount,
+        0,
+        [...recentBuffer],
+      );
     });
 
     log(runId, 'discovery', `Crawl complete`, {

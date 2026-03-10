@@ -29,6 +29,22 @@ const PIPELINE_STEPS = [
   'Generating report',
 ];
 
+// Category → Tailwind badge colours
+const CATEGORY_COLORS: Record<string, string> = {
+  home:       'bg-slate-100 text-slate-600',
+  register:   'bg-green-100 text-green-700',
+  login:      'bg-blue-100 text-blue-700',
+  checkout:   'bg-orange-100 text-orange-700',
+  cart:       'bg-amber-100 text-amber-700',
+  account:    'bg-purple-100 text-purple-700',
+  product:    'bg-teal-100 text-teal-700',
+  marketing:  'bg-pink-100 text-pink-700',
+  newsletter: 'bg-indigo-100 text-indigo-700',
+  contact:    'bg-cyan-100 text-cyan-700',
+  careers:    'bg-rose-100 text-rose-700',
+  other:      'bg-slate-100 text-slate-500',
+};
+
 export function ScanProgressPanel({ runId, onComplete, onError }: ScanProgressPanelProps) {
   const [progress, setProgress] = useState<ScanProgress | null>(null);
   const [elapsed, setElapsed] = useState('0s');
@@ -94,6 +110,7 @@ export function ScanProgressPanel({ runId, onComplete, onError }: ScanProgressPa
   const step = progress?.currentStep ?? 'Initialising…';
   const pagesScanned = progress?.pagesScanned ?? 0;
   const pagesDiscovered = progress?.pagesDiscovered ?? 0;
+  const recentPages = progress?.recentPages ?? [];
 
   const activeStep = PIPELINE_STEPS.findIndex((s) =>
     step.toLowerCase().includes(s.toLowerCase()),
@@ -176,6 +193,39 @@ export function ScanProgressPanel({ runId, onComplete, onError }: ScanProgressPa
       <p className="text-xs text-slate-400 text-center italic">
         This may take several minutes depending on scan depth and site complexity.
       </p>
+
+      {/* ── Live Crawl Feed ────────────────────────────────────────── */}
+      {recentPages.length > 0 && (
+        <div className="border border-slate-100 rounded-xl p-4 bg-slate-50">
+          <div className="text-[10px] font-bold tracking-widest uppercase text-slate-400 mb-3 flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse inline-block" />
+            Live crawl feed
+            <span className="ml-auto text-slate-300 normal-case tracking-normal font-normal">
+              {pagesDiscovered} page{pagesDiscovered !== 1 ? 's' : ''} found
+            </span>
+          </div>
+          <div className="space-y-2 max-h-44 overflow-y-auto">
+            {recentPages.map((p, i) => (
+              <div key={i} className="flex items-center gap-2 text-xs">
+                <span
+                  className={clsx(
+                    'shrink-0 font-bold px-1.5 py-0.5 rounded text-[9px] uppercase tracking-wide',
+                    CATEGORY_COLORS[p.category] ?? 'bg-slate-100 text-slate-500',
+                  )}
+                >
+                  {p.category}
+                </span>
+                <span
+                  className="text-slate-500 font-mono truncate min-w-0"
+                  title={p.url}
+                >
+                  {p.url.replace(/^https?:\/\//, '')}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

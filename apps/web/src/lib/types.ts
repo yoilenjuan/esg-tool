@@ -32,8 +32,8 @@ export interface ScanProgress {
   percentComplete: number;
   startedAt: string;
   completedAt?: string;
-  errorMessage?: string;
-}
+  errorMessage?: string;  /** Rolling buffer of the last 6 pages crawled — drives the live feed panel */
+  recentPages?: Array<{ url: string; category: string }>;}
 
 // ─── Dimension result (from ScanRunResult.dimensions) ────────────────────────
 export interface ActualVsGoodPractice {

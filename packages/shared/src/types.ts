@@ -86,6 +86,8 @@ export interface ScanProgress {
   startedAt: string;
   completedAt?: string;
   errorMessage?: string;
+  /** Rolling buffer of last 6 crawled pages — shown in the UI live feed during discovery */
+  recentPages?: Array<{ url: string; category: string }>;
 }
 
 export interface ScanRun {

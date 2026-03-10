@@ -101,6 +101,7 @@ export function scanRouter(runsBaseDir: string): IRouter {
             startedAt: update.startedAt,
             completedAt: update.completedAt,
             errorMessage: update.errorMessage,
+            recentPages: update.recentPages,
           });
         });
 

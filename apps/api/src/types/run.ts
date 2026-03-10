@@ -32,6 +32,8 @@ export interface ProgressUpdate {
   startedAt: string;
   completedAt?: string;
   errorMessage?: string;
+  /** Rolling buffer of the last 6 pages visited — shown in the UI live feed */
+  recentPages?: Array<{ url: string; category: string }>;
 }
 export type ProgressCallback = (update: ProgressUpdate) => void;
 

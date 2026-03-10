@@ -1,12 +1,13 @@
 'use client';
 
+import { useState } from 'react';
 import clsx from 'clsx';
 import type {
   ScanRunResult,
   ComplianceStatus,
   RetailRiskLevel,
 } from '@/lib/types';
-import { pdfDownloadUrl, htmlPreviewUrl } from '@/lib/api';
+import { pdfDownloadUrl, htmlPreviewUrl, API_BASE } from '@/lib/api';
 import { DimensionTable } from './DimensionTable';
 
 interface ResultsViewProps {
@@ -223,8 +224,70 @@ export function ResultsView({ result, onReset }: ResultsViewProps) {
   const pdfUrl = pdfDownloadUrl(result.runId);
   const htmlUrl = htmlPreviewUrl(result.runId);
 
+  // Screenshot lightbox
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+  const [lightboxCaption, setLightboxCaption] = useState('');
+
+  function openLightbox(filePath: string, caption: string) {
+    const normalised = filePath.replace(/\\/g, '/');
+    setLightboxSrc(`${API_BASE}/runs/${result.runId}/${normalised}`);
+    setLightboxCaption(caption);
+  }
+
   return (
     <div className="space-y-6">
+
+      {/* ── Screenshot lightbox ───────────────────────────────────── */}
+      {lightboxSrc && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Screenshot preview"
+          onClick={() => setLightboxSrc(null)}
+        >
+          <div
+            className="relative max-w-5xl w-full bg-white rounded-2xl overflow-hidden shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Toolbar */}
+            <div className="flex items-center justify-between px-5 py-3 border-b border-slate-200 bg-slate-50">
+              <span className="text-xs text-slate-500 font-mono truncate max-w-[80%]" title={lightboxCaption}>
+                {lightboxCaption}
+              </span>
+              <div className="flex items-center gap-3 shrink-0">
+                <a
+                  href={lightboxSrc}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs font-semibold text-brand-600 hover:underline"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  Open full size ↗
+                </a>
+                <button
+                  onClick={() => setLightboxSrc(null)}
+                  className="text-slate-400 hover:text-slate-700 transition-colors"
+                  aria-label="Close"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+            {/* Image */}
+            <div className="overflow-auto max-h-[80vh] bg-slate-900 flex items-center justify-center p-2">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={lightboxSrc}
+                alt={lightboxCaption}
+                className="max-w-full object-contain"
+              />
+            </div>
+          </div>
+        </div>
+      )}
       {/* ── Score card ─────────────────────────────────────────────────── */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-6">
@@ -397,7 +460,8 @@ export function ResultsView({ result, onReset }: ResultsViewProps) {
                   <th className="text-left py-2 pr-4 font-semibold">Type</th>
                   <th className="text-left py-2 pr-4 font-semibold">Description</th>
                   <th className="text-left py-2 pr-4 font-semibold">Page</th>
-                  <th className="text-left py-2 font-semibold">Captured</th>
+                  <th className="text-left py-2 pr-4 font-semibold">Captured</th>
+                  <th className="text-left py-2 font-semibold">View</th>
                 </tr>
               </thead>
               <tbody>
@@ -432,6 +496,26 @@ export function ResultsView({ result, onReset }: ResultsViewProps) {
                     </td>
                     <td className="py-2 text-slate-400 whitespace-nowrap">
                       {new Date(ev.capturedAt).toLocaleTimeString('en-GB')}
+                    </td>
+                    <td className="py-2">
+                      {ev.type === 'screenshot' ? (
+                        <button
+                          onClick={() => openLightbox(ev.filePath, ev.description)}
+                          className="flex items-center gap-1 text-brand-600 hover:text-brand-800 transition-colors"
+                          title="View screenshot"
+                        >
+                          {/* Eye icon */}
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                              d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
+                          <span className="text-xs font-semibold">View</span>
+                        </button>
+                      ) : (
+                        <span className="text-slate-300 text-xs">—</span>
+                      )}
                     </td>
                   </tr>
                 ))}
